@@ -5,8 +5,57 @@
 <link rel="stylesheet" type="text/css" href="hmindmap.css" />
 </head>
 <body>
-<svg width="800" height="800"></svg>
+<textarea class="hierarchy" style="width:500px;height:600px"></textarea>
+<svg class="hierarchy" width="800" height="800"></svg>
+
+<hr>
+
+<textarea class="json" style="width:500px;height:600px"></textarea>
+<svg class="json" width="800" height="800"></svg>
+
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="hmindmap.js"> </script>
+<script >
+var object_hierarchy=hmarkdown("svg.hierarchy");
+//d3.csv("flare.csv", function(error, data) {
+d3.json("learn.json", function(error, data) {
+	if (error) throw error;
+	d3.select("textarea").each(function(d){
+		this.value=JSON.stringify(data,null,4);
+		updateData(object_hierarchy,data);
+	})
+	//d3.select("textarea").each(function(d){console.log(this.value);})
+	//d3.select("textarea").on("input",function(){ console.log(this.value);})
+});
+
+d3.select("textarea.hierarchy").on("input",function(d){
+	var data=JSON.parse(this.value);
+	updateData(object_hierarchy,data);
+})
+
+
+
+
+var object_json=hmarkdown("svg.json");
+//d3.csv("flare.csv", function(error, data) {
+d3.json("learn_json.json", function(error, data) {
+	if (error) throw error;
+	d3.select("textarea.json").each(function(d){
+		this.value=JSON.stringify(data,null,4);
+		var res=transjson(data)
+		updateData(object_json,res[0]);
+	})
+	//d3.select("textarea").each(function(d){console.log(this.value);})
+	//d3.select("textarea").on("input",function(){ console.log(this.value);})
+});
+
+d3.select("textarea.json").on("input",function(d){
+	var data=JSON.parse(this.value);
+	var res=transjson(data)
+	updateData(object_json,res[0]);
+})
+
+
+</script>
 </body>
 </html>

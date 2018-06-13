@@ -2,11 +2,6 @@
 
 //切换开关，d 为被点击的节点
 function toggle(root,d){
-
-	/*root.each(function(d) {
-		d.x0 = d.x;
-		d.y0 = d.y;
-	});*/
 	if(d.children){ //如果有子节点
 		d._children = d.children; //将该子节点保存到 _children
 		d.children = null;  //将子节点设置为null
@@ -16,15 +11,24 @@ function toggle(root,d){
 	}
 }
 
-function redraw(g,root,source){
+function diagonal(ds, dd) {
+   var rps =radialPoint(ds.x,ds.y,ds)
+   var rpd =radialPoint(dd.x,dd.y,dd)
+   var s = {x:rps[1],y:rps[0]}
+   var d = {x:rpd[1],y:rpd[0]}
 
-	//获取连线的update部分
-	var linkUpdate= g.selectAll(".link")
-		.data(root.links(),function(d){ return d.target.name; })
+   path = `M ${s.y} ${s.x}
+           C ${(s.y + d.y) / 2} ${s.x},
+             ${(s.y + d.y) / 2} ${d.x},
+             ${d.y} ${d.x}`
+
+   return path
+ }
+
+function redraw(g,root){
 
 	var nodeUpdate = g.selectAll(".node")
 		.data(root.descendants(), function(d){ return d.name; })
-
 
 	//获取节点的exit部分
 	var nodeExit = nodeUpdate.exit();
@@ -36,11 +40,15 @@ function redraw(g,root,source){
 			return "translate(" + radialPoint(d.x, d.y,d) + ")"; 
 			//return "translate(" + d.y+","+ d.x + ")"; 
 		})
-		.on("click", function(d) { toggle(root,d); console.log("toggle",d); redraw(g,root,d); });
+		.on("click", function(d) { 
+			toggle(root,d); 
+			//console.log("toggle",d);
+			redraw(g,root); 
+		});
 
 	nodeEnter.append("circle")
 		.attr("r", 8)
-		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#aff"; });
+		.style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
 	nodeEnter.append("text")
 		.attr("dy", "0.31em")
@@ -51,6 +59,8 @@ function redraw(g,root,source){
 		})
 		.text(function(d) { 
 			return d.data.name;
+		})
+		.on("click", function() { window.open("http://google.com"); 
 		});
 
 	//2. 节点的 Update 部分的处理办法
@@ -63,7 +73,7 @@ function redraw(g,root,source){
 	updateNodes.select("circle")
 		.attr("r", 8)
 		.style("fill", function(d) { 
-			return d._children ? "lightsteelblue" : "#aff"; 
+			return d._children ? "lightsteelblue" : "#fff"; 
 		});
 
 	updateNodes.select("text")
@@ -86,13 +96,12 @@ function redraw(g,root,source){
 	/*
 	（3） 连线的处理
 	 */
+	//获取连线的update部分
+	var linkUpdate= g.selectAll(".link")
+		.data(root.links(),function(d){ return d.target.data.name; })
 
 	//获取连线的enter部分
-	var linkEnter=linkUpdate.enter().append("path")
-		.attr("class", "link")
-		.attr("d", d3.linkRadial()
-			.angle(function(d) { return d.x; })
-			.radius(function(d) { return d.y; }));
+	var linkEnter=linkUpdate.enter();
 
 	//var linkUpdate =  link;
 		/*svg.selectAll(".link")
@@ -103,36 +112,27 @@ function redraw(g,root,source){
 	var linkExit = linkUpdate.exit();
 
 	//1. 连线的 Enter 部分的处理办法
-	linkEnter.insert('path', "g")
-      .attr("class", "link");
-      /*.attr('d', function(d){
-        var o = {x: d.x0, y: d.y0}
-        return diagonal(o, o)
-      });*/
+	linkEnter.append("path")
+		.attr("class", "link")
+		.attr("d",function(d){
+			return diagonal(d.source, d.target)
+		});
 
 	//2. 连线的 Update 部分的处理办法
 	linkUpdate.transition()
+		.attr("class", "link")
+		.attr('d', function(d){
+			return diagonal(d.source, d.target)
+		})
 		.duration(500)
 
 	//3. 连线的 Exit 部分的处理办法
-	/*linkExit.transition()
-		.duration(500)
-		.remove();*/
 	  // Remove any exiting links
-	var linkExit = linkExit.transition()
-		.duration(500).remove();
-		/*.attr('d', function(d) {
-			var o = {x: d.x, y: d.y}
-			return diagonal(o, o)
-		})*/
-	console.log("end",linkExit);
-	/*
-	（4） 将当前的节点坐标保存在变量x0、y0里，以备更新时使用
-	 */
-	root.each(function(d) {
-		d.x0 = d.x;
-		d.y0 = d.y;
-	});
+	linkExit.transition()
+		.duration(500)
+		.attr('d', function(d) {
+			return diagonal(d.source,d.source)
+		}).remove();
 }
 
 
@@ -143,17 +143,25 @@ function radialPoint(x, y,d) {
 
 function updateData(object,data){
 	var rootData = d3.hierarchy(data);
-	//给第一个节点添加初始坐标x0和x1
-	//rootData.x0 = object.height / 2;
-	//rootData.y0 = object.width / 2 ;
-	//sd=stratify(data);
 	var root = object.tree(rootData);
-	redraw(object.g,root,root)
+	object.g.html("")
+	redraw(object.g,root)
 }
 
+function transjson(data){
+	var res=[]
+	for (var k in data) {
+		var node={
+			name:k,
+			children:transjson(data[k])
+		}
+		res.push(node)
+	}
+	return res
+}
 
 function hmarkdown(element){
-	var svg = d3.select("svg"),
+	var svg = d3.select(element),
 		width = +svg.attr("width"),
 		height = +svg.attr("height"),
 		g = svg.append("g").attr("transform", "translate(" + (width / 2 -40 ) + "," + (height / 2 ) + ")");
@@ -169,11 +177,5 @@ function hmarkdown(element){
 		height:height,
 		width:width
 	};
-	//d3.csv("flare.csv", function(error, data) {
-	d3.json("learn.json", function(error, data) {
-		if (error) throw error;
-		updateData(object,data);
-	});
+	return object;
 }
-
-hmarkdown("svg");
