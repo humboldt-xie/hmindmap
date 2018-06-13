@@ -60,7 +60,8 @@ function redraw(g,root){
 		.text(function(d) { 
 			return d.data.name;
 		})
-		.on("click", function() { window.open("http://google.com"); 
+		.on("click", function() { 
+			//window.open("http://cmky.net"); 
 		});
 
 	//2. 节点的 Update 部分的处理办法
